@@ -1,119 +1,168 @@
+import streamlit as st
+import requests
+from streamlit_lottie import st_lottie
+from datetime import datetime
+import time
 
-# Empty dictionary to store books
-library = {}
+# page configuration
+st.set_page_config(
+    page_title="Personal Library Management System",
+    page_icon="📚",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+#  CSS for styling
+st.markdown("""
+<style>
+    .main-header{
+        font-size: 3rem !important;
+        color: #1E3A8A;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-align: center;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1) !important;     
+    }
 
-# Function to add a book to the library
-def AddBook():
+    .sub_header {
+        font-size: 1.8rem !important;
+        color: #3882F6;
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stButton>button {
+        border-radius: 0.375rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Sidebar navigation
+st.sidebar.markdown("<h1> Choose an option:</h1>", unsafe_allow_html=True)
+
+# Lottie animation
+def load_lottie_url(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+lottie_book = load_lottie_url("https://assets9.lottiefiles.com/temp/1f20_aKAFIn.json")
+if lottie_book:
+    with st.sidebar:
+        st_lottie(lottie_book, height=200, key='book_animation')
+
+nav_option = st.sidebar.radio(
+    "",
+    ["View Library", "Add Book", "Search Book", "Library Statistics"]
+)
+
+# session state for book storage
+if 'library' not in st.session_state:
+    st.session_state.library = []
+
+# Function to save books 
+def save_library():
+    pass  
+
+# Function to add book to session state
+def add_book(title, author, publication_year, genre, read_status):
+    book = {
+        'title': title,
+        'author': author,
+        'publication_year': publication_year,
+        'genre': genre,
+        'read_status': read_status,
+        'added_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    st.session_state.library.append(book)
+    save_library()
+    st.success("Book added successfully!")
+    time.sleep(0.5)  # Animation delay
+
+# Main header
+st.markdown("<h1 class='main-header'>Library Manager </h1>", unsafe_allow_html=True)
+
+# Navigation 
+if nav_option == "Add Book":
+    st.markdown("<h2 class='sub_header'> Add a New Book</h2>", unsafe_allow_html=True)
+
+    # Error message 
+    error_message = ""
+
+    with st.form(key='add_book_form'):
+        col1 = st.columns(1)[0]  # Single column layout
+        with col1:
+            title = st.text_input("Book Title", max_chars=100)
+            author = st.text_input("Author", max_chars=100)
+            publication_year = st.number_input("Publication Year", max_value=2025, step=1, value=2025)
+            genre = st.selectbox("Genre", [
+                "Fiction", "Non-Fiction", "Science", "Technology", "Fantasy", "Romance",
+                "History", "Thriller", "Psychology", "Philosophy", "Biographies"
+            ])
+            read_status = st.radio("Have you read this book?", ("Yes", "No"))
+
+        submit_button = st.form_submit_button("Submit")
+
+        # Validation
+        if submit_button:
+            if not title.strip() or not author.strip():
+                error_message = "❌ Title and Author fields cannot be empty!"
+            else:
+                add_book(title, author, publication_year, genre, read_status)
+
+    # Display error message 
+    if error_message:
+        st.error(error_message)
+
+elif nav_option == "View Library":
+    st.markdown("<h2 class='sub_header'> Your Library </h2>", unsafe_allow_html=True)
     
-    # Add a book to the library.
-    book_title = input("Enter Book Title: ").strip()
-    author = input("Enter Author: ").strip()
-    genre = input("Enter Genre: ").strip()
-    year = input("Enter Year Published: ").strip()
-    
-    
-    if(book_title and author and genre and year.isdigit()):
-        library[book_title] = {
-            "Author": author,
-            "Genre": genre,
-            "Year": int(year)
-        }
-        
-        print(f"'{book_title}' added to your library")
+    if len(st.session_state.library) == 0:
+        st.info("No books added yet.")
     else:
-        print("Please enter valid details")
+        for idx, book in enumerate(st.session_state.library):
+            with st.expander(f"📖 {book['title']} by {book['author']}"):
+                st.write(f"**Publication Year:** {book['publication_year']}")
+                st.write(f"**Genre:** {book['genre']}")
+                st.write(f"**Read Status:** {book['read_status']}")
+                st.write(f"**Added on:** {book['added_date']}")
 
 
-# Function to Display All Books
-def display_books():
-    # Display all books in the library.
-    if library:
-        print("Your Library Collection:")
-        for title, details in library.items():
-            print(f"{title} by {details['Author']} ({details['Year']}) - {details['Genre']}")
-    else:
-        print("No books added yet")
-          
+elif nav_option == "Search Book":
+    st.markdown("<h2 class='sub_header'> Search Books </h2>", unsafe_allow_html=True)
+    search_term = st.text_input("Enter search term")
+    search_by = st.radio("Search by", ["Title", "Author", "Genre"])
+    search_button = st.button("Search")
 
-# Function to Remove a book from the library
-def remove_book():
-    # Remove a book from the library
-    book_title = input("Enter the book title to remove: ").strip()
-    if book_title in library:
-        del library[book_title]
-        print(f"'{book_title}' has been removed")
-    else:
-        print("Book not found in the library")
+    if search_button:
+        results = [
+            book for book in st.session_state.library
+            if search_term.lower() in book[search_by.lower()].lower()
+        ]
         
+        if results:
+            st.success(f"Found {len(results)} book(s).")
+            for book in results:
+                with st.expander(f"📖 {book['title']} by {book['author']}"):
+                    st.write(f"**Publication Year:** {book['publication_year']}")
+                    st.write(f"**Genre:** {book['genre']}")
+                    st.write(f"**Read Status:** {book['read_status']}")
+                    st.write(f"**Added on:** {book['added_date']}")
+        else:
+            st.warning("No matching books found.")
+
+elif nav_option == "Library Statistics":
+    st.markdown("<h2 class='sub_header'> Library Statistics </h2>", unsafe_allow_html=True)
     
-# Function to Search for a book in the library
-def search_book():
-    # Search for a book in the library
-    search_title = input("Enter book title to search: ").strip()
-    if search_title in library:
-        details = library[search_title]
-        print(f"Found: {search_title} by {details['Author']} ({details['Year']}) - {details['Genre']}")
+    if len(st.session_state.library) == 0:
+        st.info("No data available.")
     else:
-        print("Book not found")
-        
-# Function to Display Library Statistics
-def display_statistics():
-   
-    # Show library statistics
-    total_books = len(library)
-    genres = {}
-    authors = {}
+        total_books = len(st.session_state.library)
+        read_books = sum(1 for book in st.session_state.library if book["read_status"] == "Yes")
+        unread_books = total_books - read_books
 
-    for details in library.values():
-        genre = details["Genre"]
-        author = details["Author"]
-        
-        genres[genre] = genres.get(genre, 0) + 1
-        authors[author] = authors.get(author, 0) + 1
-
-    print("Library Statistics:")
-    print(f"Total Books: {total_books}")
-    
-    if total_books > 0:
-        print(f"Most Popular Genre: {max(genres, key=genres.get)} ({max(genres.values())} books)")
-        print(f" Most Popular Author: {max(authors, key=authors.get)} ({max(authors.values())} books)")
-        
-
-
-print("Personal Library Manager")
-print("1. Add a Book")
-print("2. Remove a Book")
-print("3. Search for a Book")
-print("4. Display All Books")
-print("5. Display Statistics")
-print("6. Exit")
-
-while True:  
-    choice = input("Choose an option (1-6): ").strip()
-    
-    if choice == "1":
-        AddBook()
-    
-    elif choice == "2":
-        print("Remove a Book")
-        remove_book()
-    
-    elif choice == "3":
-        print("Search for a Book")
-        search_book()
-    
-    elif choice == "4":
-        print("Display All Books")
-        display_books()
-    
-    elif choice == "5":
-        print("Display Statistics")
-        display_statistics()
-    
-    elif choice == "6":
-        print("Exiting...")
-        break
-    
-    else:
-        print("Invalid choice! Please enter a number between 1 and 6")
+        st.write(f"📚 **Total Books:** {total_books}")
+        st.write(f"✔ **Books Read:** {read_books}")
+        st.write(f"⏳ **Books Unread:** {unread_books}")
