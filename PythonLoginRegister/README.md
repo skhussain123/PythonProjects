@@ -1,8 +1,8 @@
-🛡️ Python MongoDB Login & Registration System
+# 🛡️ Python MongoDB Login & Registration System
 
 
 
-📌 Before running the project, make sure you have installed the following:
+## 📌 Before running the project, make sure you have installed the following:
 mongodb shell download  msi 
 https://www.mongodb.com/try/download/shell
 
@@ -11,7 +11,7 @@ https://www.mongodb.com/try/download/community
 
 
 
-📌 Features
+## 📌 Features
 
  User Registration (with username & password)
  User Login (validates credentials)
